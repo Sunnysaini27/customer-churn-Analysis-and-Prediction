@@ -1,0 +1,1136 @@
+---
+title: "Smart Churn Prevention"
+author: 'Insights : Ankita Goyal, Rohit Kumar, Sunny, Ishan Sharma, Jayant Jha, Chaitanya
+  Mahawar'
+date: "06 April 2024"
+output:
+  html_document:
+    df_print: paged
+  pdf_document: default
+  word_document: default
+always_allow_html: true
+cap.location: margin
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+knitr::opts_chunk$set(warning = F, message = F)
+```
+
+##### Under the guidance of Prof. Subhajit Dutta
+
+## **Acknowledgements**
+
+We extend our sincere appreciation to Prof. Subhajit Dutta for their steadfast support and invaluable guidance throughout the implementation of this churn modeling project. Their expertise and mentorship have played a pivotal role in shaping the project's trajectory, refining analytical techniques, and deepening our understanding of customer churn dynamics. We are genuinely grateful for their commitment to academic excellence, which has inspired us to explore and analyze churn data comprehensively. Their encouragement and insights have been instrumental in the project's success, and we are truly privileged to have had the opportunity to learn under their guidance.
+
+## **1. Introduction**
+
+### **1.1 About Churning**
+
+Imagine you run a shop. Some customers come in, buy something, and leave happily. But others? They come once, maybe twice, then vanish into thin air. That's churn---it's when customers stop coming back. It's a big problem for businesses, like a leaky bucket losing water. But here's the twist: we have a secret weapon---data! We're on a mission to crack the code of churn using numbers and clever tricks. So, buckle up as we dive into the world of churn modeling, where we'll decode why customers leave and how businesses can keep them sticking around. Let's roll!
+
+Key features of Churning includes :
+
+-   **Customer Behavior Changes**: Observing significant shifts in customer behavior, such as decreased frequency of purchases, reduced usage of services, or lower engagement with the brand.
+
+-   **Customer Feedback**: Monitoring feedback channels like customer support interactions, surveys, or online reviews for signs of dissatisfaction or complaints.
+
+-   **Demographic Factors**: Analyzing demographic characteristics such as age, gender, location, or income level to identify segments more prone to churning.
+
+-   **Transaction History**: Reviewing transactional data to detect patterns such as a sudden decrease in spending or a shift towards competitors' products/services.
+
+-   **Customer Interactions**: Tracking interactions across various touchpoints like website visits, app usage, or social media engagement to gauge customer interest and satisfaction levels.
+
+-   **Customer Satisfaction Metrics**: Utilizing metrics like Net Promoter Score (NPS), customer satisfaction (CSAT) scores, or customer effort score (CES) to assess overall satisfaction and loyalty.
+
+-   **Customer Lifecycle Stage**: Considering where customers are in their lifecycle with the company (e.g., new customers, long-term loyal customers) and how this impacts their likelihood of churning.
+
+-   **Competitor Actions**: Monitoring competitive landscape and market dynamics to understand how competitor actions or industry trends may influence customer behavior and churn rates.
+
+-   **Predictive Indicators**: Identifying early warning signs or predictive indicators that precede actual churn events, such as a lapse in subscription renewals or a decline in engagement metrics.
+
+-   **Churn Triggers**: Recognizing specific events or triggers that may prompt customers to consider switching to alternative products/services, such as price changes, product dissatisfaction, or changes in personal circumstances.
+
+By analyzing and understanding these key features, businesses can develop effective strategies to mitigate churn and enhance customer retention efforts.
+
+### **1.2 Objective**
+
+To develop a comprehensive churn modeling solution utilizing advanced analytical techniques and dimensionality reduction methods to provide actionable insights for businesses to improve customer retention strategies and reduce churn rates.
+
+-   Develop a robust churn modeling solution integrating advanced analytical techniques such as Support Vector Machines (SVM), Random Forest, Linear Discriminant Analysis (LDA), and Decision Trees.
+
+-   Investigate the effectiveness of dimensionality reduction techniques like Principal Component Analysis (PCA) in enhancing model performance and interpretability.
+
+-   Assess the impact of clustering algorithms on churn prediction accuracy and segmentation of customer cohorts.
+
+-   Generate actionable insights based on the churn modeling results to empower businesses with proactive strategies for improving customer retention.
+
+-   Aim to reduce churn rates by providing businesses with targeted recommendations and interventions informed by predictive analytics.
+
+
+## **2. Data Set Description**
+
+### **2.1. Introduction:**
+
+This dataset contains information about bank customers, including their demographic details, financial behavior, and churn status.
+
+### **2.2 Data Source:**
+
+The dataset was obtained from Kaggle, a platform for data science competitions and datasets.
+
+### **2.3 Variables:**
+
+-   **RowNumber**: Unique identifier for each row in the dataset.
+-   **CustomerId**: Unique identifier for each customer.
+-   **Surname**: Last name of the customer.
+-   **CreditScore**: Numerical value representing the credit score of the customer.
+-   **Geography**: Categorical variable indicating the country/region where the customer resides.
+-   **Gender**: Categorical variable indicating the gender of the customer.
+-   **Age**: Numerical value representing the age of the customer.
+-   **Tenure**: Numerical value representing the number of years the customer has been with the bank.
+-   **Balance**: Numerical value representing the account balance of the customer.
+-   **NumOfProducts**: Numerical value representing the number of products/services owned by the customer.
+-   **HasCrCard**: Binary variable indicating whether the customer has a credit card (1 = Yes, 0 = No).
+-   **IsActiveMember**: Binary variable indicating whether the customer is an active member of the bank (1 = Yes, 0 = No).
+-   **EstimatedSalary**: Numerical value representing the estimated salary of the customer.
+-   **Exited**: Binary variable indicating whether the customer has churned (1 = Yes, 0 = No).
+
+### **2.4 Target Variable:**
+
+The target variable for this dataset is "Exited," which indicates whether a customer has churned.
+
+### **2.5 Data Quality:**
+
+The dataset has been checked for missing values, outliers, and inconsistencies. Any issues identified have been addressed appropriately.
+
+### **2.6 Relevance to the Problem:**
+
+This dataset is relevant to the problem of churn prediction in the banking industry, as it contains features that may influence a customer's decision to churn, such as demographic information, financial behavior, and tenure with the bank.
+
+
+
+## **3. Data Exploration**
+
+```{r, include=FALSE}
+
+## Importing Necessary Libraries
+
+library(tidyverse)
+library(readr)
+library(ggplot2)
+library(caret)
+library(smotefamily)
+library(randomForest)
+library(e1071)
+library(rpart)
+library(dplyr)
+library(cowplot)
+library(gridExtra)
+
+```
+
+```{r load-data}
+
+## Loading the Dataset
+
+df <- read.csv("D:\\IITK\\Sem 2\\DS 2\\Project\\Churn_Modelling.csv")
+```
+
+**This is how our dataset looks like:**
+
+![](images/Screenshot%202024-04-04%20193319.png)
+
+## **3.1** **Data Cleaning**
+
+Row Number, Customer ID and Surname are not playing any role in the analysis of our data, therefore, we removed them from our dataset.
+
+```{r drop-columns, include=FALSE}
+df <- df %>% dplyr::select(-RowNumber, -CustomerId, -Surname)
+```
+
+#### **Checking Missing Values :**
+
+There are no missing values in our dataset.
+
+```{r missing-values, include= FALSE}
+sum(is.na(df))
+
+```
+
+## **3.2 Dataset Imbalance**
+
+Our analysis reveals a significant imbalance in the dataset:
+
+-   The majority of customers in the dataset have not exited, indicating a strong tendency towards customer retention.
+
+-   Conversely, a smaller yet significant portion of customers have exited, underscoring potential challenges in service satisfaction or competitive offerings.
+
+```         
+This imbalance is visually represented in the following graph:
+```
+
+```{r check-balance, warning=FALSE}
+# Set the size of the plot
+options(repr.plot.width=5, repr.plot.height=4)
+
+# Create a count plot (bar chart) using ggplot2
+plot <- ggplot(df, aes(x = factor(Exited), fill = factor(Exited))) +  # Map `fill` to `Exited` within `aes`
+  geom_bar() +
+  labs(x = "Exited", fill = "Customer Status") +
+  scale_fill_manual(values = c("0" = "maroon", "1" = "skyblue"), 
+                    labels = c("Not Exited", "Exited")) +
+  geom_text(
+    aes(label = ..count.., y = ..count..),  # Adjust the `y` aesthetic for text placement
+    stat = "count",
+    position = position_stack(vjust = 0.5),
+    size = 3  # Adjust text size if needed
+  )
+
+# Print the plot
+print(plot)
+```
+
+### **Implications of Imbalance**
+
+An imbalanced dataset can lead to biased predictive models that overly favor the majority class-in this case, customers who have not exited. Such models might underestimate the likelihood of churn, leading to missed opportunities for targeted interventions to retain at-risk customers.
+
+*We have done sampling (SMOTE) later to address this imbalance.*
+
+Okay! So, we can head towards EDA.
+
+## **3.3 Exploratory Data Analysis (EDA)**
+
+### **3.3.1 Correlation Matrix Heatmap**
+
+```{r}
+corr <- cor(df %>% select(where(is.numeric)))
+
+# Prepare data for ggplot
+corr_df <- as.data.frame(as.table(corr))
+
+# Add a column with rounded correlation values for labeling
+corr_df$label <- round(corr_df$Freq, 2)
+
+# Plot
+ggplot(corr_df, aes(Var1, Var2, fill = Freq)) + 
+  geom_tile() + 
+  scale_fill_gradient2(low = "maroon", high = "skyblue", mid = "white", midpoint = 0) +
+  geom_text(aes(label = label), color = "black", size = 3) +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1),
+        axis.title = element_blank())
+```
+
+-   **Observation:** The correlation analysis reveals several significant relationships between various customer attributes and churn rate. Notably, age, balance, number of products, and active membership status show meaningful correlations with churn, while other variables appear to have minimal direct impact.
+
+-   **Implication:** Understanding these correlations provides valuable insights for devising churn prevention strategies. Targeted efforts can be directed towards older customers, those with higher balances, fewer products, and inactive members to mitigate churn risk. Tailored retention initiatives, improved customer experiences, and personalized offers can be implemented to address the underlying factors influencing churn, thereby enhancing customer satisfaction and loyalty. Additionally, continuous monitoring and analysis of customer data are essential for refining strategies and adapting to changing market dynamics.
+
+### **3.3.2 Age distribution VS Exited status (with IsActiveMember = 0 or 1 )**
+
+```{r, fig.width = 11, fig.height=8}
+y <- df %>% filter (df$IsActiveMember == 1)
+
+
+# Age distribution by Exited status
+p1 <- ggplot(df, aes(x = Age, fill = factor(Exited))) +
+  geom_histogram(position = "dodge", binwidth = 1) +
+  labs(fill = "Exited", x = "Age", y = "Count",title = "Age distribution by Exited status ") +
+  theme_minimal()
+
+# Age distribution by Exited status of Active members
+p2 <- ggplot(y, aes(x = Age, fill = factor(Exited))) +
+  geom_histogram(position = "dodge", binwidth = 1) +
+  labs(fill = "Exited", x = "Age", y = "Count",title = "Age distribution by Exited status of active members ") +
+  theme_minimal()
+
+# Age distribution of Exited members
+x1 <- df %>% filter (df$Exited == 1)
+p3 <- ggplot(x1, aes(x = Age)) +
+  geom_histogram(fill = "skyblue", color = "black", alpha = 0.6, binwidth = 1) +
+  labs(x = "Age", y = "Count",title = "Age distribution of Exited members") +
+  theme_minimal()
+
+# Age distribution of Exited members( who were active)
+y1 <- y %>% filter (y$Exited == 1)
+p4 <- ggplot(y1, aes(x = Age)) +
+  geom_histogram(fill = "skyblue", color = "black", alpha = 0.6, binwidth = 1) +
+  labs(x = "Age", y = "Count",title = "Age distribution of Exited members( who were active)") +
+  theme_minimal()
+
+# Age distribution of staying members
+x2 <- df %>% filter (df$Exited == 0)
+p5 <- ggplot(x2, aes(x = Age)) +
+  geom_histogram(fill = "maroon", color = "black", alpha = 0.6, binwidth = 1) +
+  labs(x = "Age", y = "Count",title = "Age distribution of staying members") +
+  theme_minimal()
+
+# Age distribution of staying members (who were active)
+y2 <- y %>% filter (y$Exited == 0)
+p6 <- ggplot(y2, aes(x = Age)) +
+  geom_histogram(fill = "maroon", color = "black", alpha = 0.6, binwidth = 1) +
+  labs(x = "Age", y = "Count",title = "Age distribution of staying members (who were active)") +
+  theme_minimal()
+plot_grid(p1,p2,p3,p4,p5,p6,ncol = 2,nrow = 3)
+```
+
+**1. Age distribution by Exited status**
+
+**Observation:** The bar plot illustrates distinct age distributions between customers who exited and those who stayed. Non-exited members display a right-skewed gamma distribution, while exited members follow a normal distribution.
+
+**Implication:** The age distributions suggest age may influence churn behavior. Tailoring retention strategies based on age demographics, such as targeting younger customers with personalized offers, could help improve retention rates. Focusing on enhancing overall customer experience may be crucial for reducing attrition across different age groups. Further analysis is warranted to understand underlying factors driving churn within specific age cohorts.
+
+**2. Age distribution by Exited status of Active members**
+
+**Observation:** The graph of age distribution by exited status among active members reveals distinct patterns. Non-exited active members exhibit a discrete right-skewed gamma distribution, while exited active members follow a normal distribution.
+
+**Implication:** The differing age distributions suggest age may play a significant role in the churn behavior of active members. Younger active members are more prevalent among those who remain with the company, indicating potentially higher retention rates in this demographic. Targeting younger active members with personalized retention strategies could be beneficial. Enhancing overall customer experience may also help reduce attrition among active members of all age groups. Further analysis is needed to understand the specific factors driving churn within different age cohorts among active members.
+
+**3. Age distribution of Exited members**
+
+**Observation:** The graph of age distribution among exited members follows a discrete version of a right-skewed gamma distribution.
+
+**Implication:** The observed right-skewed gamma distribution suggests that there is a higher prevalence of younger customers among those who have exited. This implies that younger customers may be more likely to churn compared to older customers. Businesses may need to pay particular attention to younger customer segments and implement targeted retention strategies to reduce churn rates among this demographic. Understanding the reasons behind the higher churn rates among younger customers can help tailor retention efforts effectively and improve overall customer retention rates.
+
+**4. Age distribution of Exited members( who were active)**
+
+**Observation:** The graph of age distribution among exited active members follows a normal distribution.
+
+**Implication:** The normal distribution suggests that among active members who have exited, there is no significant skew towards any particular age group. This implies that churn rates among active members may not be influenced primarily by age. Instead, other factors such as product satisfaction, customer service experiences, or life events may play a more significant role in their decision to churn. Businesses should focus on identifying and addressing these underlying factors to reduce churn among active members effectively. Understanding the reasons behind churn among active members can guide the development of targeted retention strategies and ultimately improve customer retention rates.
+
+**5. Age distribution of staying members**
+
+**Observation:** The graph of age distribution among staying active members follows a discrete version of a right-skewed gamma distribution.
+
+**Implication:** The right-skewed gamma distribution suggests that among active members who are staying, there is a higher prevalence of younger customers. This implies that younger customers are more likely to remain active and engaged with the company's offerings. Businesses can leverage this insight by targeting younger active members with tailored marketing campaigns, loyalty programs, and product offerings to further enhance their engagement and loyalty. Additionally, understanding the preferences and needs of younger customers can help in developing strategies to retain them in the long term, thereby contributing to overall customer retention and satisfaction.
+
+**6. Age distribution of staying members (who were active)**
+
+**Observation:** The graph of age distribution among active staying members follows a discrete version of a right-skewed gamma distribution.
+
+**Implication:** The right-skewed gamma distribution suggests that among active staying members, there is a higher prevalence of younger customers. This indicates that younger customers are more likely to remain active and engaged with the company's offerings. Businesses can capitalize on this by targeting younger active members with tailored marketing campaigns, loyalty programs, and product offerings to further enhance their engagement and loyalty. Additionally, understanding the preferences and needs of younger customers can help develop strategies to retain them in the long term, contributing to overall customer retention and satisfaction. From this we can visualize Age distribution of Exited members and non-exited members when they were active and when they were non-active. It is clear from the shape that members who have exited , their age distribution approximates to normal (by CLT). The members who are staying, their age distribution approximates to gamma.
+
+**Now we will categorize the Age column into different age groups to gain some insights.**
+
+### **3.3.3 Age Category Distribution vs Exited**
+
+```{r}
+# Define the bin edges and labels for the age categories
+bins <- c(18, 30, 45, 65, 92)
+labels <- c("Young_Adults", "Middle_Aged_Adults", "Old_Adults", "Senior_Citizen")
+
+# Use cut to create the "Age_category" column
+df$Age_category <- cut(df$Age, breaks = bins, labels = labels, include.lowest = TRUE)
+```
+
+```{r}
+# Create the count plot with different groups represented by colors
+ggplot(df, aes(x = Age_category, fill = factor(Exited))) +
+  geom_bar(position = "dodge", color = "black") +
+  geom_text(stat = "count", aes(label = ..count..), position = position_dodge(width = 0.9), vjust = -0.5) +
+  labs( x = "Age Category") +
+  scale_fill_manual(values = c("skyblue", "pink")) +  # Adjust colors
+  theme_minimal()
+```
+
+**Observations:**
+
+-   **Young Customers:** The plot reveals that there is a minimal proportion of young customers exiting compared to other age groups. This suggests that young customers are less likely to churn.
+
+-   **Middle-aged Customers:** A significant portion of middle-aged customers exits the service. However, it's notable that there is a large number of middle-aged customers who do not exit, possibly due to their stability or loyalty to the service.
+
+-   **Old Customers:** The proportion of old customers exiting is the highest, it's noteworthy that around 50% of them do exit. This implies that older customers might be more prone to churn compared to younger ones.
+
+-   **Senior Citizen Customers:** Similar to young customers, the plot indicates a minimal proportion of senior citizens exiting. This suggests that senior citizens are also less likely to churn compared to other age groups.
+
+**Implications:**
+
+-   **Targeted Retention Strategies:** Understanding the age groups most likely to churn allows for the implementation of targeted retention strategies. For instance, focusing on retaining middle-aged customers due to their significant representation and higher propensity to churn could be beneficial.
+
+-   **Product and Service Tailoring:** Insights from the plot could guide product and service adjustments to better meet the needs of different age groups. For example, understanding why middle-aged customers are more likely to churn could lead to tailored solutions to address their specific pain points.
+
+**From the above plot we can see that mostly people from the middle_age_adults and old_adults exited as compared to other age_category.**
+
+### **3.3.4 Analysing discrete datatypes features with the target variable**
+
+```{r, warning=FALSE, message=FALSE}
+# Define the list of columns
+dis <- c("Tenure", "NumOfProducts", "HasCrCard", "IsActiveMember")
+# Create an empty list to store ggplot objects
+plots <- list()
+
+# Create plots for each column
+for (i in seq_along(dis)) {
+  plots[[i]] <- ggplot(df, aes_string(x = dis[i], fill = factor(df$Exited))) +
+    geom_bar(position = "dodge", color = "white") +
+    geom_text(stat = "count", aes(label = ..count..), position = position_dodge(width = 0.9), vjust = -0.5) +
+    labs(title = paste(dis[i], "vs Exited"), x = dis[i], fill = "Exited") +
+    scale_fill_manual(values = c("#7FC97F", "#BEAED4")) +  # Adjust colors
+    theme_minimal() +
+    theme(plot.title = element_text(face = "bold", size = 13, hjust = 0.5),
+          axis.title.x = element_text(size = 10),
+          axis.title.y = element_text(size = 10))
+}
+
+# Arrange and display the plots
+grid.arrange(grobs = plots[1], ncol = 1)
+grid.arrange(grobs = plots[2], ncol = 1)
+grid.arrange(grobs = plots[3], ncol = 1)
+grid.arrange(grobs = plots[4], ncol = 1)
+```
+
+**1. Tenure Vs Exited**
+
+-   **Observation:** The bar plot depicting the relationship between tenure and customer churn reveals interesting patterns. It appears that there is a fluctuating trend in churn rates across different tenure periods. While there is variation, there's no clear linear trend in the relationship between tenure and churn.
+
+-   **Implication:** The observed pattern suggests that churn rates are not solely dependent on tenure duration. Instead, other factors such as customer satisfaction, product offerings, and service quality may also influence churn decisions. To address churn effectively, businesses should focus on improving overall customer experience and satisfaction throughout the entire tenure, regardless of the duration. Strategies such as personalized communication, proactive customer support, and targeted retention offers can help mitigate churn risk and foster long-term customer relationships. Additionally, ongoing monitoring of churn patterns across tenure periods can provide valuable insights for refining retention strategies and enhancing customer retention efforts.
+
+**2. NumOfProducts Vs Exited**
+
+-   **Observation:** The bar plot indicates a clear correlation between the number of products held by customers and their likelihood to churn. Churn rates decrease as the number of products per customer increases.
+
+-   **Implication:** To mitigate churn, businesses should focus on cross-selling and upselling strategies to encourage customers to hold multiple products. Additionally, addressing any pain points associated with specific product combinations can help improve overall customer retention rates.
+
+**3. HasCrCard Vs Exited**
+
+-   **Observation:** The bar plot illustrates a notable contrast in churn behavior between customers who have a credit card and those who do not. Specifically, customers without a credit card exhibit a higher churn rate compared to those with a credit card.
+
+-   **Implication:** The presence of a credit card appears to be associated with higher customer retention rates. This suggests that offering credit card services or incentives may contribute to increased customer loyalty and reduced churn. Businesses could consider emphasizing the benefits of having a credit card, such as convenience, rewards, and financial flexibility, to encourage retention among customers. Additionally, tailored retention strategies targeting customers without a credit card may be necessary to address their specific needs and preferences, ultimately improving overall retention rates.
+
+**4. IsActiveMember Vs Exited**
+
+-   **Observation:** The bar plot indicates a significant disparity in churn behavior between active and inactive members. Specifically, active members exhibit notably lower churn rates compared to inactive members.
+
+-   **Implication:** Being an active member is strongly associated with higher customer retention rates. This suggests that engaging customers and encouraging active participation in the company's offerings can effectively reduce churn. Implementing strategies to promote and incentivize active membership, such as loyalty programs, personalized offers, and proactive communication, may help improve overall retention rates. Additionally, identifying and addressing the reasons behind inactivity among certain customers could be crucial in retaining them and fostering long-term loyalty.
+
+### **3.3.5 Analyzing the categorical features**
+
+```{r}
+# Identify column names with data type "character"
+cat_cols <- names(df)[sapply(df, function(x) typeof(x) == "character")]
+```
+
+```{r}
+total_churn_counts <- table(df$Gender, df$Geography)
+total_churn_counts
+
+exited_customers <- subset(df, Exited == 1)
+churn_counts <- table(exited_customers$Gender, exited_customers$Geography)
+
+proportion_churn <- churn_counts / total_churn_counts
+
+# Create a bar plot
+barplot(as.matrix(proportion_churn), 
+        beside = TRUE, 
+        legend.text = TRUE, 
+        main = "Proportion of Churned Customers by Gender and Location",
+        xlab = "Geography",
+        ylab = "Proportion of Churned Customers",
+        col = c("blue", "green"),
+        args.legend = list(title = "Gender", 
+                           cex = 0.8, 
+                           fill = c("blue", "green")))
+```
+
+-   **Observations:**
+
+    **Gender Disparity**: The bar plot illustrates that across all three countries (Spain, France, Germany), Females exhibit a higher proportion of churn compared to males. This suggests a gender disparity in churn behavior, with males being more likely to exit the service.
+
+    **Country-Specific Patterns:** While the gender difference in churn is consistent across all countries, Germany stands out with a higher overall churn rate for both males and females. This indicates that regardless of gender, customers in Germany are more prone to exiting the service compared to those in Spain and France.
+
+-   **Implications:**
+
+    **Gender-Sensitive Retention Strategies:** Recognizing the gender disparity in churn rates underscores the importance of implementing gender-sensitive retention strategies. Tailoring retention efforts to address the specific needs and preferences of male customers may be particularly crucial in mitigating churn.
+
+    **Country-Level Interventions:** The higher churn rates observed in Germany, irrespective of gender, suggest the need for country-level interventions to reduce churn. Strategies aimed at improving customer satisfaction, enhancing service quality, or addressing market-specific challenges may be necessary to stabilize the customer base in Germany.
+
+```{r, message = FALSE}
+# Group by IsActiveMember, HasCrCard, and Exited, then count occurrences
+result <- df %>%
+  group_by(IsActiveMember, HasCrCard, Exited) %>%
+  summarise(count = n()) %>%
+  ungroup() %>%
+  spread(key = Exited, value = count, fill = 0)
+
+# Print the resulting data frame
+result <- result[order(result$IsActiveMember, result$HasCrCard),]
+
+cat("IsActiveMember | HasCrCard | Not Exited | Exited\n")
+for(i in 1:nrow(result)) {
+  cat(sprintf("%14s | %8s | %10s | %6s\n",
+              result$IsActiveMember[i],
+              result$HasCrCard[i],
+              result$`0`[i],  
+              result$`1`[i])) 
+}
+```
+
+-   **Observations:**
+
+    **Active Members with Credit Card:** The table reveals that active members who also possess a credit card have a higher likelihood of not exiting compared to other categories. This suggests that the combination of being an active member and having a credit card is associated with increased retention.
+
+    **Inactive Members with Credit Card:** Conversely, inactive members who have a credit card exhibit a higher likelihood of exiting the service. This implies that possessing a credit card alone may not be sufficient to retain customers who are not actively engaged with the service.
+
+    **Active vs. Inactive Members:** Across both categories of having and not having a credit card, active members consistently demonstrate a higher likelihood of not exiting compared to inactive members. This underscores the importance of customer engagement in retention efforts, regardless of credit card possession.
+
+-   **Implications:**
+
+    **Engagement-Driven Retention Strategies:** The observation that active members, especially those with a credit card, are less likely to exit suggests the efficacy of engagement-driven retention strategies. Investing in initiatives to encourage and maintain customer activity, such as loyalty programs, personalized recommendations, or interactive features, can help bolster retention rates.
+
+    **Value of Credit Card Integration:** Integrating credit card services with the membership program or enhancing benefits for customers with credit cards may incentivize retention among active members. This highlights the potential synergies between financial services and customer engagement strategies in fostering loyalty and reducing churn.
+
+### **3.3.6 Proportion of Active Members among Customers Who Have Left :**
+
+```{r}
+left_customers <- subset(df, Exited == 1)
+not_left_customers <- subset(df, Exited == 0)
+
+proportion_active <- table(left_customers$IsActiveMember) / nrow(left_customers)
+pie(proportion_active,
+    col = c("skyblue", "salmon"),
+    labels = c("Inactive", "Active"))
+```
+
+-   **Observations:**
+
+    **Inactive Customers:** The pie chart demonstrates that among the customers who have exited the service, a significant proportion were categorized as inactive prior to their exit. This suggests a strong correlation between customer inactivity and churn.
+
+    **Active Customers:** Conversely, the proportion of exited customers who were active prior to churn is relatively smaller compared to inactive customers. This implies that active customers are less likely to churn compared to inactive ones.
+
+-   **Implications:**
+
+    **Importance of Engagement:** The observation that inactive customers represent a higher proportion of churn highlights the critical role of customer engagement in retention efforts. Implementing strategies to re-engage inactive customers, such as targeted communication, personalized offers, or proactive customer support, can help reduce churn rates.
+
+### **3.3.7 Comparison of Number of Products Purchased by Exit Status :**
+
+```{r}
+combined_data <- rbind(transform(left_customers, Status = "Left"), transform(not_left_customers, Status = "Not Left"))
+
+# Create a violin plot
+ggplot(combined_data, aes(x = Status, y = NumOfProducts, fill = Status)) +
+  geom_violin(trim = FALSE) +
+  geom_boxplot(width = 0.1, fill = "white", color = "black") +  # Add boxplot overlay for better comparison
+  labs(x = "Exit Status",
+       y = "Number of Products Purchased",
+       fill = "Exit Status") +
+  theme_minimal()
+
+```
+
+-   **Observation:** The violin plot highlights a notable difference in the distribution of the number of products purchased between customers who exited and those who stayed. Specifically, the median number of products for customers who exited is 1, while for those who stayed, it is 2.
+
+-   **Implication:** The discrepancy in median number of products suggests that customers who purchase fewer products are more likely to churn. This underscores the importance of upselling and cross-selling strategies to encourage customers to diversify their product holdings, thereby increasing their likelihood of retention. Additionally, focusing on enhancing the value proposition and benefits associated with multiple product ownership could help incentivize customers to stay longer. Furthermore, targeted retention efforts may be needed to address the specific needs and preferences of customers with fewer product holdings, potentially mitigating churn and improving overall customer retention rates.
+
+
+## **4. Data Preprocessing**
+
+### **4.1 One-Hot encoding**
+
+We transformed categorical variables, namely Gender and Geography into numeric variables through one-hot encoding. This conversion resulted in the creation of five new variables, reflecting the three geographical locations and two genders present in the dataset. Subsequently, to enhance interpretability, irrelevant variables and the original categorical features were removed. Additionally, the target variable (Exited) was excluded to facilitate the calculation of Principal Component Analysis (PCA) scores. These steps were essential to streamline the dataset for subsequent analysis and modeling.
+
+```{r message=FALSE, warning=FALSE, results='hide'}
+gender_encoded <- model.matrix(~ Gender - 1, data =   df)
+location_encoded <- model.matrix(~ Geography - 1, data = df)
+```
+
+```{r}
+df_encoded <- cbind(df[, !(colnames(df) %in% c("RowNumber","CustomerId","Gender", "Geography", "Surname", "Age_category"))], gender_encoded, location_encoded)
+```
+
+```{r}
+data_for_pca <- df_encoded[, !(colnames(df_encoded) %in% c("Exited"))]
+```
+
+
+
+## **5. PCA and Clustering**
+
+### **5.1 Principal Component Analysis**
+
+It is a statistical technique used for dimensionality reduction in multivariate data analysis. It works by transforming the original variables into a new set of orthogonal variables, known as principal components, which capture the maximum variance in the data. This enables a simplified representation of the data while retaining the most important information.
+
+Following PCA, we scaled our variables to ensure that those with larger variances do not unduly influence the principal components. This scaling process is crucial as it helps prevent variables with higher variances from disproportionately contributing to the principal components, thereby ensuring a more balanced representation of the data in the subsequent analysis.
+
+```{r}
+scaled_data <- scale(data_for_pca)
+pca_result <- prcomp(scaled_data, scale. = TRUE)
+summary(pca_result)
+```
+
+Below we have plotted the cumulative proportion of variance explained by principal components to visualize the extent to which each component contributes to the overall variance in the data. By analyzing this plot, we will identify the number of principal components required to retain a significant portion of the variation in the dataset.
+
+```{r}
+plot(cumsum(pca_result$sdev^2) / sum(pca_result$sdev^2), 
+     type = "b", 
+     xlab = "Number of Components", 
+     ylab = "Cumulative Proportion of Variance Explained",
+     main = "Cumulative Proportion of Variance Explained by Principal Components")
+```
+
+Our objective was to preserve 80 percent of the total variation. Hence, we will select the first 8 principal components, as they collectively explained the cumulative proportion of variance necessary to meet our predetermined threshold.
+
+```{r}
+# Extract the scores (transformed data) for the first 8 principal components
+pca_scores <- predict(pca_result, newdata = scaled_data)[, 1:8]
+```
+
+### **5.2 Clustering (K-MEANS)**
+
+K-means clustering is a popular unsupervised machine learning algorithm used for partitioning data into distinct groups or clusters based on similarity patterns among data points. It works by iteratively assigning each data point to the nearest cluster centroid and then recalculating the centroids based on the mean of the points assigned to each cluster.
+
+So, our first goal is to identify the optimal number of clusters ("k") for our dataset.
+
+For this we will use:
+
+#### **ELBOW METHOD**
+
+This method involves plotting the within-cluster sum of squares (WCSS) against the number of clusters, where WCSS represents the sum of squared distances between each data point and its assigned cluster centroid. The plot typically forms an elbow-like curve, where the rate of decrease in WCSS slows down after a certain point. The optimal value of k is identified at the "elbow" or the point of inflection on the curve, indicating the number of clusters that best captures the underlying structure of the data without overfitting.
+
+Below is the Elbow plot and a pairwise PCA scores plot :
+
+```{r}
+wcss <- numeric(length = 10)
+for (k in 1:10) {
+  kmeans_model <- kmeans(pca_scores, centers = k)
+  wcss[k] <- kmeans_model$tot.withinss
+}
+plot(1:10, wcss, type = "b", xlab = "Number of Clusters", ylab = "Within-Cluster Sum of Squares")
+```
+
+```{r}
+# Plot PCA scores for all 8 components
+pairs(pca_scores[,1:8], col = "blue", pch = 16)
+```
+
+Repeated iterations of the elbow method, alongside the visualization of pairwise PCA scores, guided our determination of utilizing four clusters. Through multiple iterations of the elbow plot, we pinpointed the optimal number of clusters where the rate of WCSS reduction notably slowed, reinforcing our decision. Additionally, examining the pairwise PCA scores plot provided further validation, revealing distinct patterns and relationships among data points.
+
+Next, We have applied k-means clustering using PCA scores and below is the scatterplot to visualize the distribution of clusters across two principal components.
+
+*We have plotted across any arbitrary two principal components*.
+
+```{r}
+num_clusters_4 <- 4
+kmeans_model_4 <- kmeans(pca_scores, centers = num_clusters_4, nstart = 25)
+
+cluster_assignments_4 <- kmeans_model_4$cluster
+
+```
+
+```{r}
+plot(pca_scores[,2], pca_scores[,3], 
+     col = cluster_assignments_4,
+     pch = 19,
+     main = "Cluster Assignments (4 clusters)",
+     xlab = "PC1", ylab = "PC2")
+
+# Add legend
+legend("topright", legend = unique(cluster_assignments_4), 
+       col = 1:length(unique(cluster_assignments_4)), pch = 19, cex = 0.8, title = "Cluster")
+```
+
+Here, we can visualize the distinct groupings formed by the clustering algorithm. In the next section, this will help us to understand how data points are grouped based on their similarity.
+
+Let's see summary of each cluster. This will provide us insights into the characteristics and variability within each cluster.
+
+```{r}
+# Combine PCA scores with cluster assignments
+clustered_pca <- data.frame(pca_scores, Cluster = as.factor(cluster_assignments_4))
+
+# Calculate cluster statistics for PC1 and PC2
+cluster_stats <- aggregate(. ~ Cluster, data = clustered_pca[, c("PC1", "PC2", "Cluster")], 
+                           FUN = function(x) c(mean = mean(x), sd = sd(x)))
+
+# Print cluster statistics
+print(cluster_stats)
+
+```
+
+Now, we'll visualize the distribution of these clusters across various key variables from our original dataset . This exploration aims to identify which variables play a significant role in shaping the formation of clusters, shedding light on the underlying factors driving the clustering patterns observed.
+
+```{r}
+
+merged_data <- cbind(df, clustered_pca)
+
+ggplot(data = merged_data, aes(x = Cluster, y = Balance , fill = Cluster)) +
+  geom_boxplot() +
+  labs(title = "Distribution of Balance Across Clusters",
+       x = "Cluster",
+       y = "Balance") +
+  theme_minimal()
+
+ggplot(data = merged_data, aes(x = Cluster, y = Gender , fill = Cluster)) +
+  geom_boxplot() +
+  labs(title = "Distribution of Gender Across Clusters",
+       x = "Cluster",
+       y = "Gender") +
+  theme_minimal()
+
+ggplot(data = merged_data, aes(x = Cluster, y = Geography , fill = Cluster)) +
+  geom_boxplot() +
+  labs(title = "Distribution of locations Across Clusters",
+       x = "Cluster",
+       y = "Locations") +
+  theme_minimal()
+
+ggplot(data = merged_data, aes(x = Cluster, y = NumOfProducts , fill = Cluster)) +
+  geom_boxplot() +
+  labs(title = "Distribution of number of products Across Clusters",
+       x = "Cluster",
+       y = "Number of Products") +
+  theme_minimal()
+
+ggplot(data = merged_data, aes(x = Cluster, y = IsActiveMember , fill = Cluster)) +
+  geom_boxplot() +
+  labs(title = "Distribution of Active Members Across Clusters",
+       x = "Cluster",
+       y = "Active Member or Not") +
+  theme_minimal()
+
+
+
+```
+
+**1. Balance**:
+
+-   The median balance differs significantly among clusters.
+
+-   Cluster 2 exhibits notably higher median balances compared to the others, with many outliers indicating substantial account balances.
+
+-   For Clusters 1, 3, and 4, the median balance ranges between 50,000 and 60,000 units, while for Cluster 2, it surpasses 100,000 units.
+
+**2. Gender**:
+
+-   Gender plays a discernible role in Cluster 2 and Cluster 3.
+
+-   In Cluster 2, there are two distinct medians, indicating a gender-based segmentation within the cluster, with higher balances associated with one gender.
+
+-   Cluster 3 displays a similar gender-based distinction, albeit with reversed gender balance.
+
+**3. Location**:
+
+-   The distribution across locations showcases distinct preferences within each cluster.
+
+-   Cluster 1 predominantly consists of customers from France, while Cluster 2 and Cluster 3 exhibit a balanced distribution across different locations.
+
+-   Cluster 4 primarily comprises customers from France, akin to Cluster 1.
+
+**4. Number of Products**:
+
+-   The median number of products varies among clusters, indicating diverse product usage patterns.
+
+-   Clusters 1 and 3 display a preference for a higher number of products, with a median of 2.
+
+-   Conversely, Clusters 2 and 4 exhibit a preference for fewer products, with a median of 1.
+
+**5. Active Members**:
+
+-   The median value for active members (1) is predominant across Clusters 1, 3, and 4, indicating a propensity towards active engagement.
+
+-   In Cluster 2, however, the median indicates a significant proportion of inactive members (0), suggesting a distinct behavioral segment within this cluster.
+
+**Remark**
+
+For variables where the median remains consistent across clusters, such as **Estimated Salary, tenure, HasCrCard and credit score**, these factors appear to have less influence on cluster formation compared to the aforementioned variables.
+
+*Also,the variable* **Age** *is of significant use in our analysis (we have observed this through EDA (3.3)) , but it did not have much impact in formation of clusters due to huge number of outliers.*
+
+```{r}
+# Calculating Age Distribution
+
+# Calculate the number of individuals falling within each age interval
+age_counts <- table(cut(df$Age, breaks = c(18, 30, 40, 50, 60, 70, 80, 90, 100)))
+
+```
+
+
+
+## **6. Sampling Methodology, Confidence Interval and Hypotheses Testing**
+
+### **6.1 Sampling Methodology**
+
+Our analysis employs a two-step sampling approach to ensure the representativeness and reliability of our findings. This method integrates Stratified Sampling with Simple Random Sampling Without Replacement (SRSWOR), detailed as follows:
+
+-   **Stratified Sampling** In the initial phase, we categorize our dataset based on key demographic indicators, such as age groups, to form distinct strata. This categorization process allows us to acknowledge and preserve the inherent diversity within the dataset, ensuring that all significant subgroups are adequately represented. For instance, by dividing our population into age-based strata like teenagers, young adults, middle-aged, and seniors, we guarantee a comprehensive overview that reflects the actual age distribution within the population.
+
+-   **Simple Random Sampling Without Replacement (SRSWOR)** Following stratification, we proceed to randomly select individuals from each stratum for inclusion in our sample. The selection is performed without replacement, meaning once an individual is selected, they cannot be chosen again. This approach ensures each selected individual uniquely contributes to the sample, eliminating bias and duplication. Consequently, this method produces a sample that is both representative of and diverse across the pre-identified age segments, ensuring the validity of our analysis.
+
+Through the combined application of Stratified Sampling and SRSWOR, our sampling strategy meticulously captures the heterogeneity of the population. This methodology not only enhances the accuracy of our insights but also bolsters the integrity and comprehensiveness of our analytical outcomes.
+
+```{r}
+set.seed(123)
+# Calculate the total number of individuals
+total_population <- sum(age_counts)
+
+# Calculate the sample size for each age interval
+desired_total_sample_size <- 1000
+sample_sizes <- floor((age_counts / total_population) * desired_total_sample_size)
+
+# Initialize a dataframe to store sampled data
+sampled_data <- data.frame()
+
+# Sample without replacement from each age interval
+for (age_interval in names(age_counts)) {
+  stratum_data <- subset(df, cut(Age, breaks = c(18, 30, 40, 50, 60, 70, 80, 90, 100)) == age_interval)
+  stratum_sample <- stratum_data[sample(nrow(stratum_data), size = sample_sizes[age_interval], replace = FALSE),]
+  sampled_data <- rbind(sampled_data, stratum_sample)
+}
+
+```
+
+```{r}
+## Churn Rate Calculation
+
+# Check the total number of samples
+total_samples <- nrow(sampled_data)
+
+# Compute df rate for sampled data
+df_rate <- mean(sampled_data$Exited)
+```
+
+### **6.2 Confidence Interval**
+
+In our study, the churn rate represents the proportion of individuals discontinuing a service within a specific timeframe, an essential metric for understanding customer retention challenges. To ascertain this rate with a high degree of accuracy, our analysis stratifies the population by age intervals, allowing for a nuanced understanding of churn across different demographic segments.
+
+Utilizing this stratified approach, we calculate the confidence interval for the churn rate, which is critically positioned at [0.1707, 0.2199] with a 95% confidence level. This interval is paramount as it delineates the range within which we are 95% certain the true churn rate for our population resides. In essence, this signifies our high confidence level that, across the entire population, the churn rate lies between 17.07% and 21.99%.
+
+The significance of this confidence interval extends beyond mere numerical bounds; it embodies the precision and reliability of our churn rate estimate based on the sampled data. A narrower interval would imply greater precision of our estimate, reducing uncertainty. Hence, this interval not only offers a robust estimate of the churn rate but also encapsulates the degree of uncertainty inherent in any sample-based analysis. This understanding is invaluable for making informed decisions and strategies aimed at reducing churn and enhancing customer retention.
+
+```{r}
+# Compute standard error (assuming a binomial distribution)
+se <- sqrt(df_rate * (1 - df_rate) / nrow(sampled_data))
+
+# Set confidence level (e.g., 95% confidence interval)
+confidence_level <- 0.95
+
+# Calculate z-score for the desired confidence level
+z <- qnorm((1 + confidence_level) / 2)
+
+# Calculate margin of error
+margin_of_error <- z * se
+
+# Calculate confidence interval
+lower_bound <- df_rate - margin_of_error
+upper_bound <- df_rate + margin_of_error
+```
+
+### **6.3 Hypothesis Testing**
+
+To demonstrate the concept of hypothesis testing, we make a hypothesis that 20% of all customers exit the program. The opposite of this hypothesis is another hypothesis that *more than* or *less than* 20% customers exit the program.
+
+The first hypothesis is called the *Null hypothesis* because the occurrence of this hypothesis means *nothing happens.*
+
+The second hypothesis is called the *Alternate Hypothesis* because the occurrence of this hypothesis implies the non-occurrence of the Null hypothesis.
+
+**P-value**: The p-value in statistics represents the probability of obtaining results as extreme as or more extreme than the observed results, assuming the null hypothesis is true. It serves as a measure to determine the strength of evidence against the null hypothesis in a hypothesis test. A smaller p-value suggests stronger evidence against the null hypothesis, leading to its rejection in favor of an alternative hypothesis.
+
+For the sample we have obtained, the code calculates the P-value using the standard approach.
+
+The **P-value** turns out to be: **0.7158385**
+
+**The value is significant enough for us to not be able to reject the Null hypothesis.**
+
+**Results**
+
+```{r}
+# Print results
+cat("Churn Rate:", df_rate, "\n")
+cat("Confidence Interval (", confidence_level * 100, "%): [", lower_bound, ", ", upper_bound, "]\n")
+```
+
+
+
+## **7. Model Development**
+
+```{r}
+### Removing the extra column added for EDA
+
+df <- df %>% dplyr::select(-Age_category)
+```
+
+-   In our analysis, it has been noted that the distribution of the Age variable exhibits a positive skew, indicating the presence of outliers towards the higher end of the spectrum. Such skewness can adversely affect the performance of predictive models, as they typically assume data to be normally distributed. To mitigate the issues arising from this right-skewed distribution, we propose the application of a log-normal transformation. This technique is designed to normalize the distribution, thereby enhancing the reliability and performance of subsequent algorithmic analysis.
+
+```{r log-transformation}
+
+### Log Transformation on Age
+
+df$Age <- log(df$Age)
+```
+
+-   From our analysis we have observed that the variables which have a notable impact on the likelihood of customers churning are **Age, Balance, Gender, Geography, NumOfProducts, IsActiveMember**. So we will keep only these variables for the development of our model.
+
+```{r}
+# Dataset containing only significant variables 
+
+df <- df[, !names(df) %in% c("Tenure","HasCrCard","EstimatedSalary","CreditScore")]
+```
+
+```{r one-hot-encoding}
+
+### One-Hot Encoding for modeling
+
+dummy <- dummyVars("~ .", data = df)
+df<- data.frame(predict(dummy, newdata = df))
+```
+
+**Multicollinearity**
+
+Multicollinearity refers to a situation in statistical modeling where two or more predictor variables in a multiple regression model are highly correlated, meaning that one predictor variable can be linearly predicted from the others with a substantial degree of accuracy. This condition can cause issues with the interpretation of the coefficients of the regression model, as it becomes difficult to discern the individual effect of each predictor on the outcome variable.
+
+As we have done dummy variable one-hot encoding, our dummy variables **GenderMale** and **GeographySpain** are represented by the absence of **GenderFemale, GeographyFrance** and **GeographyGermany**. Therefore we will drop GenderMale and GeographySpain to avoid Multicollinearity.
+
+```{r}
+# dropping extra dummy variables
+
+df <- df[, !names(df) %in% c("GenderMale","GeographySpain")]
+
+```
+
+-   Upon examination of our dataset, a significant imbalance between the classes has been identified. This imbalance could potentially lead to biased predictions, favoring the overrepresented class and undermining the model's ability to accurately identify instances of the underrepresented class. To address this issue and ensure a fair representation of both classes in our predictive modeling, we will employ the Synthetic Minority Over-sampling Technique (SMOTE). SMOTE is an advanced oversampling method that generates synthetic samples from the minority class, thereby balancing the class distribution and improving the model's performance on imbalanced datasets. This technique will be pivotal in enhancing the robustness and accuracy of our predictive analysis.
+
+### **7.1 Synthetic Minority Over-sampling Technique (SMOTE)**
+
+The Synthetic Minority Over-sampling Technique (SMOTE) is designed to tackle the issue of class imbalance in datasets used for machine learning. This imbalance can significantly skew the performance of predictive models, leading to a preference for the majority class and a neglect of the minority class. SMOTE addresses this challenge by generating synthetic examples of the minority class, thus balancing the class distribution in the dataset.
+
+SMOTE operates by identifying the k nearest neighbors of minority class instances within the feature space, using a distance metric such as Euclidean distance. For each minority class instance, SMOTE selects a random neighbor and generates a synthetic instance along the line connecting them. This process is repeated until the desired class balance is achieved.
+
+The generation of synthetic instances rather than simple duplication offers a more nuanced approach to oversampling. It allows for a broader exploration of the feature space associated with the minority class, thereby aiding models in learning more generalized patterns. This method can significantly enhance the performance of predictive models on imbalanced datasets.
+
+However, SMOTE assumes that the minority class instances are sufficiently dense in the feature space to generate meaningful synthetic examples. In cases where the data is sparse or the dimensionality is high, this assumption may not hold, potentially compromising the effectiveness of the oversampling. Additionally, the quality of the synthetic instances, and consequently the performance improvement offered by SMOTE, depends heavily on the quality of the original minority class instances. If these instances are not representative or contain noise, the synthetic instances generated may not contribute positively to model training.
+
+In conclusion, SMOTE is a potent tool for addressing class imbalance, enhancing model robustness and accuracy by providing a balanced class distribution through the generation of synthetic minority class examples.
+
+```{r}
+#### Applying SMOTE
+
+# removing missing values
+df <- na.omit(df)
+
+# Splitting the data set into features (X) and target (y)
+X <- df[, !names(df) %in% c("Exited")]
+y <- as.numeric(df$Exited)
+names(y) <- "Exited"
+
+# Splitting data into training and testing sets
+set.seed(123) # for reproducibility
+trainIndex <- createDataPartition(y, p = .8, list = FALSE, times = 1)
+X_train <- X[trainIndex, ]
+y_train <- y[trainIndex]
+X_test <- X[-trainIndex, ]
+y_test <- y[-trainIndex]
+
+# Converting to data frame for smote function (if not already a data frame)
+X_train_df <- as.data.frame(X_train)
+y_train_df <- as.data.frame(y_train)
+X_test_df <- as.data.frame(X_test)
+
+# Apply SMOTE only to the training data
+smote_result <- SMOTE(X = X_train_df,target = y_train_df, K = 3, dup_size = 3)
+
+# Extract the resampled data
+train_data_resampled <- smote_result$data
+X_train_resampled <- train_data_resampled[,-which(names(train_data_resampled) == "class")]
+y_train_resampled <- train_data_resampled[,which(names(train_data_resampled) == "class")]
+y_train_resampled <- as.factor(y_train_resampled)
+
+# Now, X_train_resampled and y_train_resampled contain the over sampled training data.
+
+# You can proceed with training your model using this augmented data
+
+```
+
+### **7.2 Confusion Matrix**
+
+A Confusion Matrix is a performance measurement tool for machine learning classification. It is a table with two rows and two columns that reports the number of false positives, false negatives, true positives, and true negatives. This allows more detailed analysis than mere proportion of correct classifications (accuracy). Essentially, it shows the ways in which your classification model is confused when it makes predictions.
+
+The four terms represented in a Confusion Matrix are:
+
+1.  **True Positives (TP)**: These are cases in which the model correctly predicts the positive class.
+2.  **True Negatives (TN)**: These are cases in which the model correctly predicts the negative class.
+3.  **False Positives (FP)**: These are cases in which the model incorrectly predicts the positive class. Also known as Type I error.
+4.  **False Negatives (FN)**: These are cases in which the model incorrectly predicts the negative class. Also known as Type II error.
+
+From these values, many performance metrics can be calculated, such as accuracy, precision, recall, and F1 score. Accuracy measures how often the classifier makes the correct prediction. Precision tells us the proportion of positive identifications that were actually correct. Recall, also known as sensitivity, measures the proportion of actual positives that were correctly identified. The F1 score is a weighted average of precision and recall, providing a single metric to assess the model's accuracy.
+
+Understanding the Confusion Matrix and the metrics derived from it is crucial for evaluating the performance of a classification model, allowing for the fine-tuning of algorithms based on specific needs, such as minimizing false positives or false negatives.
+
+**Evaluating the Confusion Matrix**
+
+```{r}
+
+per_metrics <- function(X){
+  TP <- X[1]
+  FP <- X[2]
+  FN <- X[3]
+  TN <- X[4]
+  
+  acc <- (TP + TN) / (TP + TN + FP + FN)  # Accuracy
+  pre <- TP / (TP + FP)   # Precision
+  rec <- TP / (TP + FN)    # Recall (Sensitivity)
+  spe <- TN / (TN + FP)    # Specificity
+  F1 <- 2 * (pre * rec) / (pre + rec)  # F1 score
+  
+  # Return a named vector of the calculated metrics
+  return(c("Accuracy" = acc,
+           "Precision" = pre,
+           "Recall" = rec,
+           "Specificity" = spe,
+           "F1 score" = F1))
+}
+```
+
+The confusion matrix serves as a cornerstone for evaluating the performance of our classification model. It provides a detailed breakdown of the model's predictions across the actual classes, allowing us to assess not just the overall accuracy but also how well the model distinguishes between the classes. The key components of the confusion matrix-True Positives (TP), True Negatives (TN), False Positives (FP), and False Negatives (FN)-form the basis for calculating more nuanced performance metrics. Below, we delve into these metrics and their implications for our model's effectiveness.
+
+**Accuracy**: We start by assessing the accuracy, which gives us an immediate sense of how often our model predicts correctly. It is calculated as the sum of correct predictions (TP and TN) divided by the total number of predictions. While informative, accuracy alone can be misleading, especially in the presence of imbalanced classes, where one class significantly outnumbers the other.
+
+**Precision and Recall**: To address potential imbalances and focus on the model's performance in predicting positive cases, we examine precision and recall. Precision, or the positive predictive value, measures the proportion of positive identifications that were actually correct. High precision indicates a model with a low rate of false positives. Conversely, recall, or the true positive rate, assesses the model's ability to capture actual positives. A high recall means the model effectively identifies positive cases without leaving many behind.
+
+**F1 Score**: Recognizing the trade-off between precision and recall, the F1 score provides a single metric that balances the two by calculating their harmonic mean. This score is particularly useful for comparing models when one needs to balance the importance of precision and recall.
+
+**Specificity and ROC-AUC**: While precision and recall focus on the model's performance with the positive class, specificity gives us insight into its ability to correctly predict negative cases. Furthermore, the Receiver Operating Characteristic (ROC) curve and the Area Under the Curve (AUC) offer a comprehensive view of the model's performance across different thresholds, summarizing its ability to distinguish between classes.
+
+By evaluating these metrics derived from the confusion matrix, we gain a multidimensional understanding of our model's performance. This analysis not only highlights the model's strengths and potential areas for improvement but also guides our decisions for model refinement to better meet the specific needs of our application.
+
+### **7.3 Model fitting**
+
+#### **7.3.1 Logistic Regression Model :**
+
+Logistic Regression is a predictive analysis algorithm used for solving binary classification problems. It employs a logistic function to model the probability of a binary response based on one or more predictor variables. This approach provides a robust method for models where the outcome is dichotomous, making it a fundamental tool for binary classification tasks in various fields of study.
+
+```{r Logistic Regression}
+
+# Training logistic regression model
+log_model <- glm(y_train_resampled ~ ., family = binomial(link = 'logit'), data = X_train_resampled)
+
+# Predict probabilities
+predictions <- predict(log_model, newdata = X_test_df, type = "response")
+
+# Convert probabilities to binary outcomes
+predicted_class <- ifelse(predictions > 0.5, 1, 0)
+
+y_test_factor <- factor(as.character(y_test), levels = c("0", "1"))
+
+# Evaluate the model
+confusionMatrix <- table(y_test_factor, predicted_class)
+
+# Print out the confusion matrix to see how well the model performed
+print(confusionMatrix)
+
+print(per_metrics(confusionMatrix))
+
+
+coefficients <- coef(log_model)
+
+
+```
+
+![](images/Screenshot 2024-04-05 174644.png){width="1776"}
+
+#### **7.3.2 SVM Model :**
+
+Support Vector Machine (SVM) is a classification method that seeks to find the optimal separating hyperplane between different classes. By maximizing the margin between the closest points of the classes (support vectors), SVM ensures a more robust classification boundary. SVMs are particularly useful in high-dimensional spaces and for cases where the number of dimensions exceeds the number of samples.
+
+```{r SVM}
+
+# Train the SVM
+svm_model <- svm(y_train_resampled ~., data = X_train_resampled, type = 'C-classification', kernel = 'radial')
+
+# Making predictions on the test set
+
+predictions <- predict(svm_model, X_test_df)
+
+predictions_factor <- factor(predictions, levels = c("0", "1"))
+y_test_factor <- factor(as.character(y_test), levels = c("0", "1"))
+
+# Evaluating the model
+confusionMatrix <- table(y_test_factor, predictions_factor)
+
+# Print out the confusion matrix to see how well the model performed
+print(confusionMatrix)
+
+print(per_metrics(confusionMatrix))
+```
+
+#### **7.3.3 Decision Tree Model :**
+
+Decision Trees are a non-parametric supervised learning method used for classification and regression. The goal is to create a model that predicts the value of a target variable by learning simple decision rules inferred from the data features. A tree can be seen as a piecewise constant approximation. Decision Trees are simple to understand and interpret and can handle both numerical and categorical data.
+
+```{r Decision tree}
+
+# Train the Decision tree model
+DT_model <- rpart(y_train_resampled ~ ., data = X_train_resampled, method = "class")
+
+
+# Making predictions on the test set
+
+predictions <- predict(DT_model, X_test_df, type = "class")
+
+predictions_factor <- factor(predictions, levels = c("0", "1"))
+y_test_factor <- factor(as.character(y_test), levels = c("0", "1"))
+
+# Evaluating the model
+confusionMatrix <- table(y_test_factor, predictions_factor)
+
+# Print out the confusion matrix to see how well the model performed
+print(confusionMatrix)
+
+print(per_metrics(confusionMatrix))
+```
+
+#### **7.3.4 Random Forest :**
+
+Random Forest is an ensemble learning technique that builds upon the simplicity of decision trees by combining multiple trees to improve the overall model's accuracy and prevent overfitting. By aggregating the predictions of numerous decision trees on various sub-samples of the dataset, Random Forest reduces the risk of overfitting while maintaining high prediction accuracy. It is versatile and capable of performing both classification and regression tasks efficiently.
+
+```{r Random Forest}
+
+# Train the Random Forest model
+rf_model <- randomForest(y_train_resampled ~ ., data = X_train_resampled)
+
+# Making predictions on the test set
+predictions <- predict(rf_model, X_test_df)
+
+predictions_factor <- factor(predictions, levels = c("0", "1"))
+y_test_factor <- factor(as.character(y_test), levels = c("0", "1"))
+
+# Evaluating the model
+confusionMatrix <- table(y_test_factor, predictions_factor)
+
+# Print out the confusion matrix to see how well the model performed
+print(confusionMatrix)
+
+print(per_metrics(confusionMatrix))
+
+```
+
+After evaluating four predictive models-Logistic Regression, SVM, Decision Tree, and Random Forest-on various performance metrics, the Random Forest model demonstrated superior effectiveness in predicting customer churn. It excelled with an accuracy of 84.1%, precision of 91.34%, recall of 88.48%, specificity of 66.75%, and an F1 score of 89.89%. This model's ability to balance accuracy with both precision and recall suggests it adeptly handles the complexity of churn prediction, making it the best choice for this application.
+
+```{r}
+print(importance(rf_model))
+```
+
+**Analysis of features through Random Forest model :**
+
+-   Age emerged as the most influential feature with a score of 1159.4671. This indicates that customer age is a critical determinant in predicting churn, with different age groups exhibiting varying levels of churn risk.
+
+-   NumOfProducts held the second spot in terms of importance, scoring 921.9254. This suggests that the diversity of products used by a customer significantly affects their likelihood to churn, pointing to the importance of cross-selling and product adoption in retention strategies.
+
+-   IsActiveMember, with a score of 668.1495, was identified as another vital predictor. Active engagement with the company's services or platforms appears to decrease the propensity to churn, highlighting the value of fostering customer engagement.
+
+-   Balance, GeographyGermany, GenderFemale, and GeographyFrance showed moderate importance scores of 360.9651, 351.8946, 377.2737, and 219.6469, respectively. These factors contribute to churn risk but to a lesser extent compared to Age, NumOfProducts, and IsActiveMember status. It suggests that while they have an impact, efforts to mitigate churn should prioritize the more influential factors.
+
+
+## **8. Conclusion**
+
+**1. Understanding Churn Patterns:** Through comprehensive analysis, we've identified key factors contributing to churn, including age, balance, number of products, gender, location, and active membership status. These insights enable us to tailor strategies effectively.
+
+**2. Targeted Marketing Strategies:** Armed with knowledge about demographic and behavioral patterns, businesses can implement targeted marketing initiatives. This includes incentivizing active membership, personalized promotions, and retention efforts for specific customer segments.
+
+**3. Improving Customer Engagement:** Proactive engagement with customers, particularly those exhibiting signs of potential churn such as low balances or inactive memberships, can significantly reduce churn rates. Personalized interactions and offers based on individual profiles can foster stronger customer relationships.
+
+**4. Enhanced Product Offerings:** Recognizing the correlation between certain product features and churn rates suggests opportunities for product enhancements or diversification. Meeting evolving customer needs and preferences can boost satisfaction and loyalty.
+
+**5. Addressing Imbalance with SMOTE:** Techniques like SMOTE address data imbalance, enhancing the predictive power of models. By ensuring a more representative dataset, these models provide more accurate insights into churn behavior.
+
+**6. Model Selection and Equations:** After evaluating various models, including logistic regression, SVM, random forest, and decision trees, we found random forest to be the most effective for churn prediction. The logistic regression model offers an equation that can be utilized for future predictions. This equation enables businesses to estimate the probability of customer churn with a certain level of accuracy, facilitating proactive retention strategies.
+
+**7. Continuous Monitoring and Adaptation:** Churn prevention is an ongoing process. Continuous monitoring of customer behavior and market dynamics, coupled with regular model updates and strategy refinements, ensures that businesses stay ahead in mitigating churn risks and maximizing customer retention.
+
+By integrating these findings into their operational strategies, businesses can not only reduce churn rates but also foster long-term customer loyalty and profitability.
